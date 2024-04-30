@@ -18,7 +18,7 @@ The goal of this document is to deploy llama2-13b model in a multitenancy setup 
 
 ## 1. Prerequisites
 
-Ensure the following utilities are installed:
+Ensure the following utilities are installed on your system. We will need these tools to interact with your AWS environemnt, EKS and build the docker image.
 
 1. [AWS CLI v2](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 2. [eksctl](https://eksctl.io/introduction/#installation)
@@ -61,7 +61,10 @@ cloudWatch:
 iam:
   withOIDC: true
 EOF
+```
+Deploy the cluster
 
+```
 eksctl create cluster --config-file eks_cluster.yaml
 ```
 
@@ -134,7 +137,11 @@ managedNodeGroups:
      allow: true
      publicKeyPath: ~/.ssh/id_rsa.pub
 EOF
+```
 
+Create the nodegroup
+
+```
 eksctl create nodegroup \
     --config-file eks_nodegroup.yaml \
     --install-neuron-plugin=false
@@ -174,6 +181,8 @@ Use `kubectl` to install the Neuron Scheduling Extension.
 
 ```
 kubectl apply -f https://raw.githubusercontent.com/aws-neuron/aws-neuron-sdk/master/src/k8/k8s-neuron-scheduler-eks.yml
+```
+```
 kubectl apply -f https://raw.githubusercontent.com/aws-neuron/aws-neuron-sdk/master/src/k8/my-scheduler.yml
 ```
 
@@ -203,6 +212,8 @@ Create a ECR repository
 
 ```
 export ECR_REPO_NAME='neuron_2_18_1_repo'
+```
+```
 aws ecr-public create-repository --repository-name $ECR_REPO_NAME --region us-east-1
 ```
 If the repository already exists, check it using this command:
@@ -247,7 +258,6 @@ COPY ./Inf2-eks-inference /app
 WORKDIR /app/vllm
 
 # Add your custom stack of code
-#RUN git clone https://github.com/aws-neuron/aws-neuron-samples.git
 RUN pip install sentencepiece transformers==4.36.2 -U
 RUN pip install transformers-neuronx --extra-index-url=https://pip.repos.neuron.amazonaws.com -U
 RUN python -m pip install outlines
@@ -262,10 +272,10 @@ RUN pip install -e .
 RUN pip install protobuf==3.19.2
 RUN pip install fschat
 
-WORKDIR /app/vllm
+WORKDIR /app/llmperf
 ```
 
-The Docker container is expecting the directory `Inf2-eks-inference` in the same shared filesystem. The directory `inf2-eks-inference` should include `vllm_llmperf` and `llmperf`.
+The Docker container is expecting the directory `Inf2-eks-inference` in the same shared filesystem. The directory `inf2-eks-inference` should include `vllm` and `llmperf`.
 
 
 Once we have the file we can build the docker container and upload it to the ECR repository
@@ -277,17 +287,20 @@ docker build -t neuron-container:pytorch .
 Logging to the ECR repository created, tag the image and push the image to ECR:
 ```
 aws ecr-public get-login-password --region us-east-1| docker login --username AWS --password-stdin public.ecr.aws/XXXXXX/neuron_2_18_1_repo
+```
+```
 docker tag neuron-container:pytorch public.ecr.aws/XXXXXX/neuron_2_18_1_repo:latest
+```
+```
 docker push public.ecr.aws/XXXXXX/neuron_2_18_1_repo:latest
 ```
 
 
 ## 10. Llama2 13B Pod Deployment through vllm
 
-For this test we will request 8 Neuron cores per pod, so we can run up to 3 pods simultaneously. 
+For this test we will request 8 Neuron cores per pod and set the server batch size to 8 for 4K context window. In this configuration we can run up to 3 pods simultaneously on an inf2.48xl instance. 
 
-The POD is expecting to have Llama2-13b directory and 
-
+Build the pod deployment file.
 ```
 cat > llama2-4k-tp8-b8.yaml << EOF
 apiVersion: v1
@@ -314,7 +327,10 @@ spec:
         limits:
           aws.amazon.com/neuron: 4
 EOF
+```
+Deploy the pod
 
+```
 kubectl apply -f llama2-4k-tp8-b8.yaml
 ```
 

@@ -14,10 +14,10 @@ The goal of this document is to deploy llama2-13b model in a multitenancy setup 
 5.  Install the Neuron Device Plugin
 6.  Install the Neuron Scheduling Extension
 7.  Check the number of Neuron devices available in the cluster
-8.  ECR Repository and Docker image preparation
-9.  EFS Shared FileSystem to Store the Model
-10. Install EFS-CSI Driver in EKS
-11. Llama2 13B Pod Deployment
+8.  ECR Repository preparation
+9.  Docker Image preparation 
+10. Llama2 13B Pod Deployment through vllm
+11. Run the llmperf benchmark
 
 
 ## 1. Prerequisites
@@ -329,9 +329,11 @@ kubectl exec -it llama2-4k-tp8-b8  -n default -- bash
 
 cd /app/llmperf
 
-Change the test parameters as needed
-vi latency-llama2-13b.sh 
+Change the test parameters as needed on the latency-llama2-13b.sh file.
 
+Run the llmperf test.
+
+```
 bash latency-llama2-13b.sh
 ```
 

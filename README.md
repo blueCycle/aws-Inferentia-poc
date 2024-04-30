@@ -1,8 +1,4 @@
-# Inferencing on Inf2 instances running in EKS
-This is a setup guide to help with Inferentia POC on EKS
-
-# Llama2 Multitenancy with EKS on Inf2
-
+# Inferencing on Inf2 instances with vLLM running in EKS
 The goal of this document is to deploy llama2-13b model in a multitenancy setup with EKS and Inf2 instances.
 
 ## Tables of Contents

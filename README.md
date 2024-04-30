@@ -11,7 +11,7 @@ The goal of this document is to deploy llama2-13b model in a multitenancy setup 
 6.  Install the Neuron Scheduling Extension
 7.  Check the number of Neuron devices available in the cluster
 8.  ECR Repository preparation
-9.  Docker Image preparation 
+9.  Docker Image preparation and push to ECR
 10. Llama2 13B Pod Deployment through vllm
 11. Run the llmperf benchmark
 
@@ -165,6 +165,8 @@ Use `kubectl` to install the Neuron Device Plugin.
 
 ```
 kubectl apply -f https://raw.githubusercontent.com/aws-neuron/aws-neuron-sdk/master/src/k8/k8s-neuron-device-plugin-rbac.yml
+```
+```
 kubectl apply -f https://raw.githubusercontent.com/aws-neuron/aws-neuron-sdk/master/src/k8/k8s-neuron-device-plugin.yml
 ```
 
@@ -236,7 +238,7 @@ The output is as below:
 }                                                  
 
 ```
-## 9. Docker Image preparation 
+## 9. Docker Image preparation and push to ECR
 
 
 For the Docker Image preparation we will use a AWS Deep Learning Container already prebuild with the latest Neuron SDK.  To be able to use the AWS DL image we need to login first

@@ -1,5 +1,8 @@
 # Inferencing on Inf2 instances with vLLM running in EKS
-The goal of this document is to deploy llama2-13b model in a multitenancy setup with EKS and Inf2 instances.
+
+The goal of this document is to deploy llama2-13b model on AWS Inferentia 2 instances on EKS. 
+
+We are using the Neuron SDK 2.18.1 release that supports contineous batching. 
 
 ## Tables of Contents
 
@@ -12,8 +15,10 @@ The goal of this document is to deploy llama2-13b model in a multitenancy setup 
 7.  Check the number of Neuron devices available in the cluster
 8.  ECR Repository preparation
 9.  Docker Image preparation and push to ECR
-10. Llama2 13B Pod Deployment through vllm
+10. Llama2 13B Pod Deployment
 11. Run the llmperf benchmark
+12. Result for 4K context window
+13. Result for 8k context window
 
 
 ## 1. Prerequisites
@@ -298,7 +303,7 @@ docker push public.ecr.aws/XXXXXX/neuron_2_18_1_repo:latest
 ```
 
 
-## 10. Llama2 13B Pod Deployment through vllm
+## 10. Llama2 13B Pod Deployment
 
 For this test we will request 8 Neuron cores per pod and set the server batch size to 24 for 4K context window. In this configuration we can run up to 3 pods simultaneously on an inf2.48xl instance. 
 
@@ -350,9 +355,11 @@ Run the llmperf test.
 ```
 bash latency-llama2-13b.sh
 ```
-## 12. Results - llmperf benchmark with vllm for 4k context with tp=8 (4x Neuron Accelarators) and server batch 24
+## 12. Results - llama2 13B with 4K context on Inf2 instances
 
-Below is the config used for latency-llama2-13b.sh file.
+This configuration uses 4 Neuron accelarators (tp=8, as each accelarator has 2 Neuron cores) and server batch on 24.
+
+Below is the config used for llmperf test (latency-llama2-13b.sh file).
 
 ```
 export LLM_PERF_CONCURRENT=22
@@ -380,48 +387,51 @@ python3 ${LLM_PERF_SCRIPT_DIR}/token_benchmark_ray.py \
 --llm-api openai \
 --additional-sampling-params '{}'
 ```
-**llmperf results** 
+****llmperf results**** 
 
-inter_token_latency_s = 0.109 msec. This refers to the average time taken to generate each individual token in a sequence.
-ttft_s = 3.03 seconds. Time to First Token - Is the time taken from the initiation of a request until the first token of output is generated.
-end_to_end_latency_s = 56.13 seconds. This is the total time taken from the start of a request to the completion of the entire output. The equation for this is ttft + output tokens * inter token latency. 
-Overall Output Throughput = 166 tokens/second. This indicates the rate at which tokens are produced on average across the entire test, measured in tokens per second.
+**inter_token_latency_s = 0.109 msec.** This refers to the average time taken to generate each individual token in a sequence.
+
+**ttft_s = 3.03 seconds.** Time to First Token - Is the time taken from the initiation of a request until the first token of output is generated.
+
+**end_to_end_latency_s = 56.13 seconds.** This is the total time taken from the start of a request to the completion of the entire output. The equation for this is ttft + output tokens * inter token latency. 
+
+**Overall Output Throughput = 166 tokens/second.** This indicates the rate at which tokens are produced on average across the entire test, measured in tokens per second.
 
 Raw results below.
 
 ```
-**inter_token_latency_s**
+inter_token_latency_s
 p25 = 0.10163148166861351
 p50 = 0.10702191344503317
 p75 = 0.11276160603150126
 p90 = 0.11817865567186951
 p95 = 0.11886552227389088
 p99 = 0.1743002865265452
-**mean = 0.10989042557537512**
+mean = 0.10989042557537512
 min = 0.09626751026944404
 max = 0.18549707034948917
 stddev = 0.015529047546578849
 
-**ttft_s** 
+ttft_s
 p25 = 2.0387424847867806
 p50 = 3.113982766517438
 p75 = 4.074644652981078
 p90 = 4.790316980972421
 p95 = 4.983342077798443
 p99 = 5.129886006060988
-**mean = 3.032657462526748**
+mean = 3.032657462526748
 min = 0.5222592910286039
 max = 5.1856156249996275
 stddev = 1.3089841682680285
 
-**end_to_end_latency_s**
+end_to_end_latency_s
 p25 = 55.97674963020836
 p50 = 57.4742788435542
 p75 = 58.92187684998498
 p90 = 60.478638478566424
 p95 = 60.59555665924563
 p99 = 64.4010606003867
-**mean = 56.13276988609207**
+mean = 56.13276988609207
 min = 22.181874828995205
 max = 65.64542450301815
 stddev = 7.829863663852064
@@ -450,20 +460,20 @@ min = 2602
 max = 3489
 stddev = 234.8986241687329
 
-**number_output_tokens**
+number_output_tokens
 p25 = 495.0
 p50 = 511.5
 p75 = 525.0
 p90 = 535.1
 p95 = 543.8
 p99 = 556.83
-**mean = 494.5681818181818**
+mean = 494.5681818181818
 min = 114
 max = 565
 stddev = 84.45238034214634
 
 Number Of Errored Requests: 0
-**Overall Output Throughput: 166.55283788835882**
+Overall Output Throughput: 166.55283788835882
 Number Of Completed Requests: 44
 Completed Requests Per Minute: 20.20584954851649
 Launched Requests Per Minute: 35.987575600993196

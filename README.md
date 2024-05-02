@@ -340,6 +340,16 @@ Deploy the pod
 ```
 kubectl apply -f llama2-4k-tp8-b24.yaml
 ```
+You can tail the logs by using the below command to check if its compiling well. 
+```
+kubectl logs -f llama2-4k-tp8-b24
+```
+Wait till you see the following output before you start with the llmperf benchmark test
+
+```
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+```
 
 ## 11. Run the llmperf benchmark
 ```

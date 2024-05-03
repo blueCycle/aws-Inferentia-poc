@@ -1,6 +1,6 @@
-# Inferencing on Inf2 instances with vLLM running in EKS
+# LLM Inferencing on Inf2 instances with contineous batching running in EKS
 
-The goal of this document is to deploy llama2-13b model on AWS Inferentia 2 instances on EKS. 
+The goal of this document is help you deploy and test LLM models on AWS Inferentia 2 instances on EKS. 
 
 We are using the Neuron SDK 2.18.1 release that supports contineous batching. 
 
@@ -361,7 +361,9 @@ INFO:     Application startup complete.
 kubectl exec -it llama2-4k-tp8-b8  -n default -- bash
 ```
 
+```
 cd /app/llmperf
+```
 
 Change the test parameters as needed on the latency-llama2-13b.sh file, see below steps for guidance.
 
@@ -497,7 +499,7 @@ Completed Requests Per Minute: 20.20584954851649
 Launched Requests Per Minute: 35.987575600993196
 ```
 
-## 11. Pod Deployment - Llama2 13B with 4K context and TP=8 and Batch=12
+## 11. Pod Deployment - Llama2 13B with 8K context and TP=8 and Batch=12
 
 For this test we will request 8 Neuron cores per pod and set the server batch size to 12 for 8K context window. 
 
@@ -522,7 +524,7 @@ spec:
     node.kubernetes.io/instance-type: inf2.48xlarge
   containers:
     - name: llama2-inf
-      image: "public.ecr.aws/d4w0n5z5/llama2-example-repo"
+      image: "public.ecr.aws/xxxxxx/neuron_2_18_1_repo"
       imagePullPolicy: Always
       ports:
         - containerPort: 8080
@@ -556,8 +558,9 @@ INFO:     Application startup complete.
 ```
 kubectl exec -it llama2-8k-tp8-b12  -n default -- bash
 ```
-
+```
 cd /app/llmperf
+```
 
 Change the test parameters as needed on the latency-llama2-13b.sh file, see below steps for guidance.
 

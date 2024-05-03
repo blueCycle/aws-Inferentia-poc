@@ -15,11 +15,8 @@ We are using the Neuron SDK 2.18.1 release that supports contineous batching.
 7.  Check the number of Neuron devices available in the cluster
 8.  ECR Repository preparation
 9.  Docker Image preparation and push to ECR
-10. Pod Deployment - Llama2 13B with 4K context and TP=8 and Batch=24
-11. Run the llmperf benchmark
-12. Result for 4K context window
-13. Result for 8k context window
-
+10. Pod Deployment and Results - Llama2 13B with 4K context and TP=8 and Batch=24
+11. Pod Deployment and Results - Llama2 13B with 8K context and TP=8 and Batch=12
 
 ## 1. Prerequisites
 

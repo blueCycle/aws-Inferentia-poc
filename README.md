@@ -410,8 +410,11 @@ end_to_end_latency_s = This is the total time taken from the start of a request 
 Overall Output Throughput = This indicates the rate at which tokens are produced on average across the entire test, measured in tokens per second.
 
 **inter_token_latency_s = 0.109 seconds.** 
+
 **ttft_s = 3.03 seconds.** 
+
 **end_to_end_latency_s = 56.13 seconds.** 
+
 **Overall Output Throughput = 166 tokens/second.** 
 
 Raw results below.
@@ -608,8 +611,11 @@ end_to_end_latency_s = This is the total time taken from the start of a request 
 Overall Output Throughput = This indicates the rate at which tokens are produced on average across the entire test, measured in tokens per second.
 
 **inter_token_latency_s = 0.56 seconds.** 
+
 **ttft_s = 11.36 seconds.** 
+
 **end_to_end_latency_s = 25.99 seconds.** 
+
 **Overall Output Throughput = 15.32 tokens/second.** 
 
 Raw results below.

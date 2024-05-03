@@ -15,7 +15,7 @@ We are using the Neuron SDK 2.18.1 release that supports contineous batching.
 7.  Check the number of Neuron devices available in the cluster
 8.  ECR Repository preparation
 9.  Docker Image preparation and push to ECR
-10. Llama2 13B Pod Deployment
+10. Pod Deployment - Llama2 13B with 4K context and TP=8 and Batch=24
 11. Run the llmperf benchmark
 12. Result for 4K context window
 13. Result for 8k context window
@@ -303,9 +303,13 @@ docker push public.ecr.aws/XXXXXX/neuron_2_18_1_repo:latest
 ```
 
 
-## 10. Llama2 13B Pod Deployment
+## 10. Pod Deployment - Llama2 13B with 4K context and TP=8 and Batch=24
 
-For this test we will request 8 Neuron cores per pod and set the server batch size to 24 for 4K context window. In this configuration we can run up to 3 pods simultaneously on an inf2.48xl instance. 
+For this test we will request 8 Neuron cores per pod and set the server batch size to 24 for 4K context window. 
+
+In this configuration we can run up to 3 pods simultaneously on an inf2.48xl instance. 
+
+The config uses the **NousResearch/Llama-2-13b-chat-hf** model from Huggingface
 
 Build the pod deployment file.
 ```
@@ -335,7 +339,7 @@ spec:
           aws.amazon.com/neuron: 4
 EOF
 ```
-Deploy the pod
+**Deploy the pod**
 
 ```
 kubectl apply -f llama2-4k-tp8-b24.yaml
@@ -351,7 +355,8 @@ INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 ```
 
-## 11. Run the llmperf benchmark
+**Run the llmperf benchmark**
+
 ```
 kubectl exec -it llama2-4k-tp8-b8  -n default -- bash
 ```
@@ -359,17 +364,6 @@ kubectl exec -it llama2-4k-tp8-b8  -n default -- bash
 cd /app/llmperf
 
 Change the test parameters as needed on the latency-llama2-13b.sh file, see below steps for guidance.
-
-Run the llmperf test.
-
-```
-bash latency-llama2-13b.sh
-```
-## 12. Results - llama2 13B with 4K context on Inf2 instances
-
-This configuration uses 4 Neuron accelarators (tp=8, as each accelarator has 2 Neuron cores) and server batch on 24.
-
-Below is the config used for llmperf test (latency-llama2-13b.sh file).
 
 ```
 export LLM_PERF_CONCURRENT=22
@@ -397,15 +391,29 @@ python3 ${LLM_PERF_SCRIPT_DIR}/token_benchmark_ray.py \
 --llm-api openai \
 --additional-sampling-params '{}'
 ```
+
+Run the llmperf test.
+
+```
+bash latency-llama2-13b.sh
+```
+
 ****llmperf results**** 
 
-**inter_token_latency_s = 0.109 msec.** This refers to the average time taken to generate each individual token in a sequence.
+Definition 
 
-**ttft_s = 3.03 seconds.** Time to First Token - Is the time taken from the initiation of a request until the first token of output is generated.
+inter_token_latency_s = This refers to the average time taken to generate each individual token in a sequence.
 
-**end_to_end_latency_s = 56.13 seconds.** This is the total time taken from the start of a request to the completion of the entire output. The equation for this is ttft + output tokens * inter token latency. 
+ttft_s = Time to First Token - Is the time taken from the initiation of a request until the first token of output is generated.
 
-**Overall Output Throughput = 166 tokens/second.** This indicates the rate at which tokens are produced on average across the entire test, measured in tokens per second.
+end_to_end_latency_s = This is the total time taken from the start of a request to the completion of the entire output. The equation for this is ttft + output tokens * inter token latency. 
+
+Overall Output Throughput = This indicates the rate at which tokens are produced on average across the entire test, measured in tokens per second.
+
+**inter_token_latency_s = 0.109 seconds.** 
+**ttft_s = 3.03 seconds.** 
+**end_to_end_latency_s = 56.13 seconds.** 
+**Overall Output Throughput = 166 tokens/second.** 
 
 Raw results below.
 
@@ -489,4 +497,201 @@ Completed Requests Per Minute: 20.20584954851649
 Launched Requests Per Minute: 35.987575600993196
 ```
 
+## 11. Pod Deployment - Llama2 13B with 4K context and TP=8 and Batch=12
+
+For this test we will request 8 Neuron cores per pod and set the server batch size to 12 for 8K context window. 
+
+In this configuration we can run up to 3 pods simultaneously on an inf2.48xl instance. 
+
+The config used the **OpenAssistant/llama2-13b-orca-8k-3319** model from Huggingface.
+
+Build the pod deployment file.
+
+```
+cat > llama2-4k-tp8-b24.yaml << EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  name: llama2-8k-tp8-b12
+  labels:
+    app.kubernetes.io/name: proxy
+spec:
+  restartPolicy: Never
+  schedulerName: my-scheduler
+  nodeSelector:
+    node.kubernetes.io/instance-type: inf2.48xlarge
+  containers:
+    - name: llama2-inf
+      image: "public.ecr.aws/d4w0n5z5/llama2-example-repo"
+      imagePullPolicy: Always
+      ports:
+        - containerPort: 8080
+          name: http-web-svc
+      command: ["python3", "-m", "vllm.entrypoints.openai.api_server", "--model=OpenAssistant/llama2-13b-orca-8k-3319", "--tensor-parallel-size=8", "--max-num-seqs=12", "--max-model-len=8192", "--block-size=8192"]
+
+      resources:
+        limits:
+          aws.amazon.com/neuron: 4
+EOF
+```
+
+**Deploy the pod**
+
+```
+kubectl apply -f llama2-4k-tp8-b24.yaml
+```
+You can tail the logs by using the below command to check if its compiling well. 
+```
+kubectl logs -f llama2-8k-tp8-b12
+```
+Wait till you see the following output before you start with the llmperf benchmark test
+
+```
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+```
+
+**Run the llmperf benchmark**
+
+```
+kubectl exec -it llama2-8k-tp8-b12  -n default -- bash
+```
+
+cd /app/llmperf
+
+Change the test parameters as needed on the latency-llama2-13b.sh file, see below steps for guidance.
+
+```
+export LLM_PERF_CONCURRENT=11
+export LLM_PERF_MAX_REQUESTS=$(expr ${LLM_PERF_CONCURRENT} \* 4 )
+export OPENAI_API_KEY=EMPTY
+export OPENAI_API_BASE="http://localhost:8000/v1“
+export LLM_PERF_SCRIPT_DIR=/app/llmperf
+
+export date_str=$(date '+%Y-%m-%d-%H-%M-%S')
+export LLM_PERF_OUTPUT=outputs/${date_str}
+
+mkdir -p $LLM_PERF_OUTPUT
+cp "$0" "${LLM_PERF_OUTPUT}"/
+
+python3 ${LLM_PERF_SCRIPT_DIR}/token_benchmark_ray.py \
+--model "OpenAssistant/llama2-13b-orca-8k-3319" \
+--mean-input-tokens 6500 \
+--stddev-input-tokens 500 \
+--mean-output-tokens 1000 \
+--stddev-output-tokens 100 \
+--max-num-completed-requests ${LLM_PERF_MAX_REQUESTS} \
+--timeout 1800 \
+--num-concurrent-requests ${LLM_PERF_CONCURRENT} \
+--results-dir "${LLM_PERF_OUTPUT}" \
+--llm-api openai \
+--additional-sampling-params '{}'
+
+```
+
+**Run the llmperf test**
+
+```
+bash latency-llama2-13b.sh
+```
+
+****llmperf results**** 
+
+Definition 
+
+inter_token_latency_s = This refers to the average time taken to generate each individual token in a sequence.
+
+ttft_s = Time to First Token - Is the time taken from the initiation of a request until the first token of output is generated.
+
+end_to_end_latency_s = This is the total time taken from the start of a request to the completion of the entire output. The equation for this is ttft + output tokens * inter token latency. 
+
+Overall Output Throughput = This indicates the rate at which tokens are produced on average across the entire test, measured in tokens per second.
+
+**inter_token_latency_s = 0.56 seconds.** 
+**ttft_s = 11.36 seconds.** 
+**end_to_end_latency_s = 25.99 seconds.** 
+**Overall Output Throughput = 15.32 tokens/second.** 
+
+Raw results below.
+
+```
+inter_token_latency_s
+p25 = 0.12065905930901591
+p50 = 0.23019955186813604
+p75 = 0.6564494956112217
+p90 = 1.5154716742238425
+p95 = 1.8138607880509359
+p99 = 3.829911785986042
+mean = 0.5653168054476464
+min = 0.0
+max = 4.6799434920152025
+stddev = 0.8599713050574596
+
+ttft_s
+p25 = 5.850097168266075
+p50 = 11.249102731526364
+p75 = 16.787823722988833
+p90 = 19.891032167931556
+p95 = 20.538458102504954
+p99 = 20.778852665637388
+mean = 11.362158912532983
+min = 0.0
+max = 20.865948325023055
+stddev = 6.1490052874112155
+
+end_to_end_latency_s
+p25 = 21.930546166287968
+p50 = 23.09734338952694
+p75 = 29.075104386982275
+p90 = 34.27767710183981
+p95 = 36.01626953789383
+p99 = 56.59083648444037
+mean = 25.99720367924469
+min = 2.021412153961137
+max = 69.1289901509881
+stddev = 8.95479695366345
+
+request_output_throughput_token_per_s
+p25 = 1.1646560410569788
+p50 = 3.9310715892736705
+p75 = 7.169428930013774
+p90 = 11.364683251579875
+p95 = 14.614314120157859
+p99 = 17.559891377290775
+mean = 4.908545456119871
+min = 0.16630731923562533
+max = 18.833682001795527
+stddev = 4.5583725462747395
+
+number_input_tokens
+p25 = 6026.5
+p50 = 6496.0
+p75 = 6759.75
+p90 = 7066.0
+p95 = 7222.75
+p99 = 7275.52
+mean = 6410.295454545455
+min = 5070
+max = 7291
+stddev = 522.7075121276451
+
+number_output_tokens
+p25 = 10.75
+p50 = 21.5
+p75 = 87.5
+p90 = 138.20000000000007
+p95 = 163.90000000000003
+p99 = 409.80000000000007
+mean = 60.18181818181818
+min = 1
+max = 556
+stddev = 93.07243308987093
+
+Number Of Errored Requests: 0
+Overall Output Throughput: 15.327249128632607
+Number Of Completed Requests: 44
+Completed Requests Per Minute: 15.280943240026467
+Launched Requests Per Minute: 17.81132842047346
+
+```
 

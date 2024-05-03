@@ -31,7 +31,7 @@ Start by setting some variables for your environment. Replace the values to suit
 
 ```
 export AWS_REGION=us-east-2
-export CLUSTER_NAME=llama2
+export CLUSTER_NAME=inf2test
 export EKS_VERSION=1.29
 ```
 
